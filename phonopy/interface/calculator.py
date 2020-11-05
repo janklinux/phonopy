@@ -65,6 +65,8 @@ calculator_info = {
                           'help': "Invoke Wien2k mode"}},
     'castep': {'option': {'name': "--castep",
                            'help': "Invoke CASTEP mode"}},
+    'quip': {'option': {'name': "--quip",
+                           'help': "Invoke QUIP mode"}},
 }
 
 
@@ -167,6 +169,9 @@ def write_crystal_structure(filename,
     elif interface_mode == 'castep':
         import phonopy.interface.castep as castep
         castep.write_castep(filename, cell)
+    elif interface_mode == 'quip':
+        import phonopy.interface.quip as quip
+        quip.write_quip(filename, cell)
 
     else:
         raise RuntimeError("No calculator interface was found.")
@@ -271,6 +276,9 @@ def write_supercells_with_displacements(interface_mode,
     elif interface_mode == 'castep':
         import phonopy.interface.castep as castep
         castep.write_supercells_with_displacements(*args, **kwargs)
+    elif interface_mode == 'quip':
+        import  phonopy.interface.quip as quip
+        quip.write_supercells_with_displacements(*args, **kwargs)
     else:
         raise RuntimeError("No calculator interface was found.")
 
@@ -391,6 +399,10 @@ def read_crystal_structure(filename=None,
         from phonopy.interface.castep import read_castep
         unitcell = read_castep(cell_filename)
         return unitcell, (cell_filename,)
+    elif interface_mode == 'quip':
+        from phonopy.interface.quip import read_quip
+        unitcell = read_quip(cell_filename)
+        return unitcell, (cell_filename,)
     else:
         raise RuntimeError("No calculator interface was found.")
 
@@ -418,6 +430,8 @@ def get_default_cell_filename(interface_mode):
         return "geometry.in"
     elif interface_mode in ('castep'):
         return "unitcell.cell"
+    elif interface_mode == 'quip':
+        return "input.xyz"
     else:
         return None
 
@@ -446,6 +460,8 @@ def get_default_supercell_filename(interface_mode):
         return "geometry.in.supercell"
     elif interface_mode in ('castep'):
         return "supercell.cell"
+    elif interface_mode == 'quip':
+        return 'supercell.xyz'
     else:
         return None
 
@@ -475,6 +491,7 @@ def get_default_physical_units(interface_mode=None):
     CP2K          : hartree, angstrom,  AMU,         hartree/au,   hartree/angstrom.au
     FHI-aims      : eV,      angstrom,  AMU,         eV/angstrom,  eV/angstrom^2
     castep        : eV,      angstrom,  AMU,         eV/angstrom,  eV/angstrom^2
+    QUIP          : eV,      angstrom,  AMU,         eV/angstrom,  eV/angstrom^2 (ONLY WHEN TRAINED FOR eV/ang)
 
     units['force_constants_unit'] is used in
     the 'get_force_constant_conversion_factor' method.
@@ -561,6 +578,12 @@ def get_default_physical_units(interface_mode=None):
         units['distance_to_A'] = 1.0
         units['force_constants_unit'] = 'eV/angstrom^2'
         units['length_unit'] = 'angstrom'
+    elif interface_mode == 'quip':
+        units['factor'] = VaspToTHz
+        units['nac_factor'] = Hartree * Bohr
+        units['distance_to_A'] = 1.0
+        units['force_constants_unit'] = 'eV/angstrom^2'
+        units['length_unit'] = 'angstrom'
 
     return units
 
@@ -593,6 +616,8 @@ def get_force_sets(interface_mode,
         from phonopy.interface.aims import parse_set_of_forces
     elif interface_mode == 'castep':
         from phonopy.interface.castep import parse_set_of_forces
+    elif interface_mode == 'quip':
+        from phonopy.interface.quip import parse_set_of_forces
 
     else:
         return []

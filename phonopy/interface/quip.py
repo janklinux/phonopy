@@ -37,18 +37,40 @@
 
 import sys
 import numpy as np
-from phonopy.structure.atoms import PhonopyAtoms as Atoms
+from phonopy.structure.atoms import PhonopyAtoms
 from phonopy.interface.vasp import check_forces, get_drift_forces
 
 
 def read_quip(filename):
-    pass
+    with open(filename, 'r') as f:
+        lnr = 0
+        pos = []
+        name = []
+        for line in f:
+            if lnr == 1:
+                bits = line.split()
+                for ib, bit in enumerate(bits):
+                    if 'Lattice' in bit:
+                        cell = [[float(bit.split('=')[1][1:]), float(bits[ib+1]), float(bits[ib+2])],
+                                [float(bits[ib+3]), float(bits[ib+4]), float(bits[ib+5])],
+                                [float(bits[ib+6]), float(bits[ib+7]), float(bits[ib+8][:-1])]]
+            if lnr >= 2:
+                name.append(line.split()[0])
+                pos.append([float(x) for x in line.split()[1:4]])
+            lnr += 1
+    return PhonopyAtoms(symbols=name, cell=cell, positions=pos)
+
 
 def write_quip(filename, atoms):
-    pass
+    with open(filename, 'w') as f:
+        f.write('{}\n'.format(len(atoms.symbols)))
+        f.write('Lattice="{} {} {} {} {} {} {} {} {}"\n'.format(atoms.cell[0][0], atoms.cell[0][1], atoms.cell[0][2],
+                                                                atoms.cell[1][0], atoms.cell[1][1], atoms.cell[1][2],
+                                                                atoms.cell[2][0], atoms.cell[2][1], atoms.cell[2][2]))
+        for n, a in zip(atoms.symbols, atoms.positions):
+            f.write('{} {} {} {}\n'.format(n, a[0], a[1], a[2]))
 
-
-class Atoms_with_forces(Atoms):
+class Atoms_with_forces(PhonopyAtoms):
     # Hack to phonopy.atoms to maintain ASE compatibility for forces
     def get_forces(self):
         return self.forces
@@ -56,49 +78,29 @@ class Atoms_with_forces(Atoms):
 
 def read_quip_output(filename):
     # Read QUIP output and return geometry, energy and forces from prediction
+    with open(filename, 'r') as f:
+        lnr = 0
+        name = []
+        pos = []
+        forces = []
+        for line in f:
+            if line.startswith('AT'):
+                if lnr == 0:
+                    n_atoms = int(line.split()[1])
+                if lnr == 1:
+                    bits = line.split()
+                    for ib, bit in enumerate(bits):
+                        if 'Lattice' in bit:
+                            cell = [[float(bit.split('=')[1][1:]), float(bits[ib + 1]), float(bits[ib + 2])],
+                                    [float(bits[ib + 3]), float(bits[ib + 4]), float(bits[ib + 5])],
+                                    [float(bits[ib + 6]), float(bits[ib + 7]), float(bits[ib + 8][:-1])]]
+                if lnr >= 2:
+                    name.append(line.split()[1])
+                    pos.append([float(x) for x in line.split()[2:5]])
+                    forces.append([float(x) for x in line.split()[10:13]])
+                lnr += 1
 
-    lines = open(filename, 'r').readlines()
-
-    l = 0
-    N = 0
-    while l < len(lines):
-        line = lines[l]
-        if "| Number of atoms" in line:
-            N = int(line.split()[5])
-        elif "| Unit cell:" in line:
-            cell = []
-            for i in range(3):
-                l += 1
-                vec = lmap(float, lines[l].split()[1:4])
-                cell.append(vec)
-        elif ("Atomic structure:" in line) or ("Updated atomic structure:" in line):
-            if "Atomic structure:" in line:
-                i_sym = 3
-                i_pos_min = 4
-                i_pos_max = 7
-            elif "Updated atomic structure:" in line:
-                i_sym = 4
-                i_pos_min = 1
-                i_pos_max = 4
-            l += 1
-            symbols = []
-            positions = []
-            for n in range(N):
-                l += 1
-                fields = lines[l].split()
-                sym = fields[i_sym]
-                pos = map(float, fields[i_pos_min:i_pos_max])
-                symbols.append(sym)
-                positions.append(pos)
-        elif "Total atomic forces" in line:
-            forces = []
-            for i in range(N):
-                l += 1
-                force = map(float, lines[l].split()[-3:])
-                forces.append(force)
-        l += 1
-
-    atoms = Atoms_with_forces(cell=cell, symbols=symbols, positions=positions)
+    atoms = Atoms_with_forces(cell=cell, symbols=name, positions=pos)
     atoms.forces = forces
 
     return atoms

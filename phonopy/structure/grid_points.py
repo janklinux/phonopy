@@ -343,8 +343,7 @@ class GridPoints(object):
             self._mesh,
             rotations,
             is_shift=self._is_shift,
-            is_time_reversal=is_time_reversal,
-            is_dense=True)
+            is_time_reversal=is_time_reversal)
 
         shift = np.array(self._is_shift, dtype='intc') * 0.5
 
@@ -353,8 +352,7 @@ class GridPoints(object):
                 grid_address,
                 self._mesh,
                 self._rec_lat,
-                is_shift=self._is_shift,
-                is_dense=True)
+                is_shift=self._is_shift)
             self._grid_address = grid_address[:np.prod(self._mesh)]
         else:
             self._grid_address = grid_address
