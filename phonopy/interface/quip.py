@@ -85,8 +85,8 @@ def read_quip_output(filename):
         forces = []
         for line in f:
             if line.startswith('AT'):
-                if lnr == 0:
-                    n_atoms = int(line.split()[1])
+                # if lnr == 0:
+                #     n_atoms = int(line.split()[1])
                 if lnr == 1:
                     bits = line.split()
                     for ib, bit in enumerate(bits):
